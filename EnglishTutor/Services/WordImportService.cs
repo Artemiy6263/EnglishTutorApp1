@@ -57,15 +57,21 @@ namespace EnglishTutor.Services
                     : "WordsAPI не вернул слова. Проверьте ключ и доступ к API.");
 
             using var ctx = new AppDbContext();
+            var category = ctx.WordCategories.Find(categoryId);
+            if (category == null)
+                return WordImportResult.Failed("Выбранная категория не найдена.");
+
             var existing = ctx.Words
                 .AsEnumerable()
                 .GroupBy(w => w.EnglishWord.ToLower())
                 .ToDictionary(g => g.Key, g => g.First());
-            var wordsForLesson = new List<Word>();
             var enrichLimit = GetEnrichLimit();
+            var translateLimit = GetTranslateLimit();
             var added = 0;
             var skipped = 0;
+            var updated = 0;
             var enrichedCount = 0;
+            var translatedCount = 0;
 
             foreach (var suggestion in suggestions)
             {
@@ -76,34 +82,39 @@ namespace EnglishTutor.Services
                 if (existing.TryGetValue(word, out var existingWord))
                 {
                     skipped++;
-                    if (existingWord.CategoryId == categoryId)
-                        wordsForLesson.Add(existingWord);
+                    if (existingWord.CategoryId == categoryId && NeedsImportedMetadataUpdate(existingWord) && translatedCount < translateLimit)
+                    {
+                        existingWord.DifficultyLevel = DetectDifficulty(word, suggestion.Score, difficulty);
+                        existingWord.RussianTranslation = await GetRussianTranslationOrFallbackAsync(word, existingWord.ExampleSentence, translatedCount < translateLimit);
+                        translatedCount++;
+                        updated++;
+                    }
                     continue;
                 }
 
                 var enriched = enrichedCount < enrichLimit ? await EnrichWordAsync(suggestion) : suggestion;
                 if (enrichedCount < enrichLimit) enrichedCount++;
-                var translation = await TryTranslateToRussianAsync(word);
+                var translation = await GetRussianTranslationOrFallbackAsync(word, enriched.Definition, translatedCount < translateLimit);
+                if (translatedCount < translateLimit) translatedCount++;
                 var newWord = new Word
                 {
                     EnglishWord = word,
-                    RussianTranslation = Truncate(string.IsNullOrWhiteSpace(translation) ? enriched.Definition : translation, 200, "перевод не указан"),
-                    ExampleSentence = Truncate(enriched.Example, 500),
+                    RussianTranslation = translation,
+                    ExampleSentence = Truncate(string.IsNullOrWhiteSpace(enriched.Example) ? enriched.Definition : enriched.Example, 500),
                     ExampleTranslation = "",
-                    DifficultyLevel = difficulty,
+                    DifficultyLevel = DetectDifficulty(word, suggestion.Score, difficulty),
                     CategoryId = categoryId,
                     Transcription = enriched.Phonetic
                 };
                 ctx.Words.Add(newWord);
                 existing.Add(word, newWord);
-                wordsForLesson.Add(newWord);
                 added++;
             }
 
             ctx.SaveChanges();
-            var linked = LinkWordsToLesson(ctx, categoryId, wordsForLesson);
+            var linked = SyncCategoryWordsToLesson(ctx, categoryId);
             var source = usingFreeApi ? "Datamuse API без ключа" : "WordsAPI";
-            return new WordImportResult { Added = added, Skipped = skipped, LinkedToLesson = linked, Message = $"Источник: {source}. Добавлено слов: {added}. Пропущено дублей: {skipped}. Добавлено в урок: {linked}." };
+            return new WordImportResult { Added = added, Skipped = skipped, Updated = updated, LinkedToLesson = linked, Message = $"Источник: {source}. Категория: {category.Name}. Добавлено слов: {added}. Обновлено: {updated}. Пропущено дублей: {skipped}. Добавлено в урок: {linked}." };
         }
 
         private static async Task<List<WordSuggestion>> FetchWordsFromFreeDatamuseApiAsync(int categoryId, int count)
@@ -234,14 +245,73 @@ namespace EnglishTutor.Services
             }
         }
 
-        private static int LinkWordsToLesson(AppDbContext ctx, int categoryId, List<Word> words)
+        private static async Task<string> GetRussianTranslationOrFallbackAsync(string word, string fallback, bool allowOnlineTranslation)
         {
-            if (words.Count == 0) return 0;
+            var yandexTranslation = await TryTranslateToRussianAsync(word);
+            if (IsUsefulTranslation(word, yandexTranslation))
+                return Truncate(yandexTranslation, 200);
 
+            if (allowOnlineTranslation)
+            {
+                var myMemoryTranslation = await TryTranslateWithMyMemoryAsync(word);
+                if (IsUsefulTranslation(word, myMemoryTranslation))
+                    return Truncate(myMemoryTranslation, 200);
+            }
+
+            return Truncate(fallback, 200, "перевод не найден");
+        }
+
+        private static async Task<string> TryTranslateWithMyMemoryAsync(string word)
+        {
+            try
+            {
+                var url = $"https://api.mymemory.translated.net/get?q={Uri.EscapeDataString(word)}&langpair=en%7Cru";
+                var email = App.Configuration["ApiKeys:MyMemoryEmail"]?.Trim();
+                if (!string.IsNullOrWhiteSpace(email))
+                    url += $"&de={Uri.EscapeDataString(email)}";
+
+                var json = await _http.GetStringAsync(url);
+                var token = JObject.Parse(json);
+                if (token["responseStatus"]?.Value<int>() != 200)
+                    return "";
+
+                return token["responseData"]?["translatedText"]?.ToString() ?? "";
+            }
+            catch
+            {
+                return "";
+            }
+        }
+
+        private static bool IsUsefulTranslation(string englishWord, string translation)
+        {
+            if (string.IsNullOrWhiteSpace(translation)) return false;
+            var normalizedTranslation = translation.Trim().ToLower();
+            if (normalizedTranslation == englishWord.Trim().ToLower()) return false;
+            return normalizedTranslation.Any(ch => ch >= 'а' && ch <= 'я' || ch == 'ё');
+        }
+
+        private static bool NeedsImportedMetadataUpdate(Word word)
+        {
+            var translation = word.RussianTranslation.Trim().ToLower();
+            return string.IsNullOrWhiteSpace(translation)
+                || translation == "перевод не указан"
+                || translation == "перевод не найден"
+                || !translation.Any(ch => ch >= 'а' && ch <= 'я' || ch == 'ё');
+        }
+
+        private static int SyncCategoryWordsToLesson(AppDbContext ctx, int categoryId)
+        {
             var category = ctx.WordCategories.Find(categoryId);
             if (category == null) return 0;
 
             var lesson = FindOrCreateLessonForCategory(ctx, category);
+            var words = ctx.Words
+                .Where(w => w.CategoryId == categoryId)
+                .OrderBy(w => w.EnglishWord)
+                .ToList();
+            if (words.Count == 0) return 0;
+
             var existingWordIds = ctx.LessonWords
                 .Where(lw => lw.LessonId == lesson.LessonId)
                 .Select(lw => lw.WordId)
@@ -253,7 +323,7 @@ namespace EnglishTutor.Services
                 .Max() + 1;
             var linked = 0;
 
-            foreach (var word in words.Where(w => w.WordId > 0).DistinctBy(w => w.WordId))
+            foreach (var word in words)
             {
                 if (!existingWordIds.Add(word.WordId))
                     continue;
@@ -359,6 +429,15 @@ namespace EnglishTutor.Services
             return normalized.All(ch => char.IsLetter(ch) || ch == '-' || ch == '\'') ? normalized : "";
         }
 
+        private static DifficultyLevel DetectDifficulty(string word, int score, DifficultyLevel fallback)
+        {
+            var length = word.Replace("-", "").Replace("'", "").Length;
+            if (score >= 20000 || length <= 5) return DifficultyLevel.Easy;
+            if (score >= 5000 || length <= 8) return DifficultyLevel.Medium;
+            if (length >= 9 || score > 0) return DifficultyLevel.Hard;
+            return fallback;
+        }
+
         private static string Truncate(string value, int maxLength, string fallback = "")
         {
             var text = string.IsNullOrWhiteSpace(value) ? fallback : value.Trim();
@@ -369,6 +448,12 @@ namespace EnglishTutor.Services
         {
             var configured = App.Configuration["ApiKeys:EnrichImportedWordsLimit"]?.Trim();
             return int.TryParse(configured, out var limit) ? Math.Clamp(limit, 0, 5000) : 200;
+        }
+
+        private static int GetTranslateLimit()
+        {
+            var configured = App.Configuration["ApiKeys:TranslateImportedWordsLimit"]?.Trim();
+            return int.TryParse(configured, out var limit) ? Math.Clamp(limit, 0, 5000) : 500;
         }
 
         public static readonly Dictionary<string, string> AvailableTopics = new()
@@ -406,6 +491,7 @@ namespace EnglishTutor.Services
     {
         public int Added { get; set; }
         public int Skipped { get; set; }
+        public int Updated { get; set; }
         public int LinkedToLesson { get; set; }
         public string Message { get; set; } = string.Empty;
 
