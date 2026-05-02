@@ -1,0 +1,39 @@
+﻿<Window x:Class="EnglishTutor.Windows.Student.StudentDashboardWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="EnglishTutor — Главная" Width="1100" Height="680"
+        WindowStartupLocation="CenterScreen" Background="#F0F4FF">
+    <Window.Resources><ResourceDictionary><ResourceDictionary.MergedDictionaries><ResourceDictionary Source="/Resources/Styles.xaml"/></ResourceDictionary.MergedDictionaries></ResourceDictionary></Window.Resources>
+    <Grid>
+        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+        <Border Grid.Row="0" Background="#3B6FE8" Padding="16,12">
+            <Grid>
+                <TextBlock Text="📚 EnglishTutor" FontFamily="Lora" FontSize="20" FontWeight="Bold" Foreground="White" VerticalAlignment="Center"/>
+                <StackPanel HorizontalAlignment="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock x:Name="TxtUser" FontFamily="Nunito" FontSize="13" Foreground="White" VerticalAlignment="Center" Margin="0,0,16,0"/>
+                    <Button Content="Выйти" FontFamily="Nunito" FontSize="12" Background="Transparent" Foreground="White" BorderBrush="White" BorderThickness="1" Padding="12,6" Cursor="Hand" Click="BtnLogout_Click"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="24">
+                <TextBlock x:Name="TxtGreeting" FontFamily="Lora" FontSize="26" FontWeight="Bold" Foreground="#1A1D3A" Margin="0,0,0,4"/>
+                <TextBlock Text="Продолжайте учиться каждый день!" FontFamily="Nunito" FontSize="14" Foreground="#6B7280" Margin="0,0,0,24"/>
+                <Grid>
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0" Margin="0,0,12,0">
+                        <Border Style="{StaticResource SmallCard}" Margin="0,0,0,12"><StackPanel><TextBlock Text="🎯 Выполнено заданий" FontFamily="Nunito" FontSize="14" FontWeight="SemiBold" Foreground="#1A1D3A" Margin="0,0,0,8"/><TextBlock x:Name="TxtStat1" Style="{StaticResource StatNumber}" Text="0"/><TextBlock Text="всего заданий" Style="{StaticResource SubText}" HorizontalAlignment="Center" Margin="0,4,0,0"/></StackPanel></Border>
+                        <Border Style="{StaticResource SmallCard}" Margin="0,0,0,12"><StackPanel><TextBlock Text="✅ Сдано успешно" FontFamily="Nunito" FontSize="14" FontWeight="SemiBold" Foreground="#1A1D3A" Margin="0,0,0,8"/><TextBlock x:Name="TxtStat2" Style="{StaticResource StatNumber}" Text="0"/><TextBlock Text="заданий сдано" Style="{StaticResource SubText}" HorizontalAlignment="Center" Margin="0,4,0,0"/></StackPanel></Border>
+                        <Border Style="{StaticResource SmallCard}"><StackPanel><TextBlock Text="🏆 Достижения" FontFamily="Nunito" FontSize="14" FontWeight="SemiBold" Foreground="#1A1D3A" Margin="0,0,0,8"/><TextBlock x:Name="TxtStat3" Style="{StaticResource StatNumber}" Text="0"/><TextBlock Text="получено" Style="{StaticResource SubText}" HorizontalAlignment="Center" Margin="0,4,0,0"/></StackPanel></Border>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1">
+                        <Border Style="{StaticResource SmallCard}" Margin="0,0,0,12" Cursor="Hand" MouseLeftButtonUp="GoLessons"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><TextBlock Text="📖" FontSize="36" VerticalAlignment="Center" Margin="0,0,16,0"/><StackPanel Grid.Column="1" VerticalAlignment="Center"><TextBlock Text="Уроки" FontFamily="Nunito" FontSize="16" FontWeight="Bold" Foreground="#1A1D3A"/><TextBlock Text="Изучайте слова по темам" FontFamily="Nunito" FontSize="12" Foreground="#6B7280"/></StackPanel></Grid></Border>
+                        <Border Style="{StaticResource SmallCard}" Margin="0,0,0,12" Cursor="Hand" MouseLeftButtonUp="GoExercises"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><TextBlock Text="✏️" FontSize="36" VerticalAlignment="Center" Margin="0,0,16,0"/><StackPanel Grid.Column="1" VerticalAlignment="Center"><TextBlock Text="Задания" FontFamily="Nunito" FontSize="16" FontWeight="Bold" Foreground="#1A1D3A"/><TextBlock Text="Практикуйте навыки" FontFamily="Nunito" FontSize="12" Foreground="#6B7280"/></StackPanel></Grid></Border>
+                        <Border Style="{StaticResource SmallCard}" Margin="0,0,0,12" Cursor="Hand" MouseLeftButtonUp="GoGrammar"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><TextBlock Text="📚" FontSize="36" VerticalAlignment="Center" Margin="0,0,16,0"/><StackPanel Grid.Column="1" VerticalAlignment="Center"><TextBlock Text="Грамматика" FontFamily="Nunito" FontSize="16" FontWeight="Bold" Foreground="#1A1D3A"/><TextBlock Text="Правила и времена" FontFamily="Nunito" FontSize="12" Foreground="#6B7280"/></StackPanel></Grid></Border>
+                        <Border Style="{StaticResource SmallCard}" Cursor="Hand" MouseLeftButtonUp="GoProgress"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><TextBlock Text="📈" FontSize="36" VerticalAlignment="Center" Margin="0,0,16,0"/><StackPanel Grid.Column="1" VerticalAlignment="Center"><TextBlock Text="Мой прогресс" FontFamily="Nunito" FontSize="16" FontWeight="Bold" Foreground="#1A1D3A"/><TextBlock Text="Ваша статистика и достижения" FontFamily="Nunito" FontSize="12" Foreground="#6B7280"/></StackPanel></Grid></Border>
+                    </StackPanel>
+                </Grid>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</Window>

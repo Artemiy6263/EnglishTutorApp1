@@ -1,0 +1,39 @@
+﻿<Window x:Class="EnglishTutor.Windows.Student.ProgressWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Мой прогресс" Width="900" Height="680"
+        WindowStartupLocation="CenterScreen" Background="#F0F4FF">
+    <Window.Resources><ResourceDictionary><ResourceDictionary.MergedDictionaries><ResourceDictionary Source="/Resources/Styles.xaml"/></ResourceDictionary.MergedDictionaries></ResourceDictionary></Window.Resources>
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="24">
+            <Grid Margin="0,0,0,4"><TextBlock Text="📈 Мой прогресс" Style="{StaticResource PageTitle}" VerticalAlignment="Center"/><Button Content="← Назад" Style="{StaticResource SecondaryButton}" HorizontalAlignment="Right" VerticalAlignment="Center" Click="BtnBack_Click"/></Grid>
+            <UniformGrid Rows="1" Columns="3" Margin="0,16,0,20">
+                <Border Style="{StaticResource SmallCard}" Margin="0,0,8,0"><StackPanel HorizontalAlignment="Center"><TextBlock x:Name="TxtTotalEx" Style="{StaticResource StatNumber}" Text="0"/><TextBlock Text="Всего заданий" Style="{StaticResource SubText}" HorizontalAlignment="Center" Margin="0,4,0,0"/></StackPanel></Border>
+                <Border Style="{StaticResource SmallCard}" Margin="4,0"><StackPanel HorizontalAlignment="Center"><TextBlock x:Name="TxtPassedEx" Style="{StaticResource StatNumber}" Text="0"/><TextBlock Text="Сдано успешно" Style="{StaticResource SubText}" HorizontalAlignment="Center" Margin="0,4,0,0"/></StackPanel></Border>
+                <Border Style="{StaticResource SmallCard}" Margin="8,0,0,0"><StackPanel HorizontalAlignment="Center"><TextBlock x:Name="TxtTotalScore" Style="{StaticResource StatNumber}" Text="0"/><TextBlock Text="Суммарный балл" Style="{StaticResource SubText}" HorizontalAlignment="Center" Margin="0,4,0,0"/></StackPanel></Border>
+            </UniformGrid>
+            <Border Style="{StaticResource SmallCard}" Margin="0,0,0,16">
+                <StackPanel><TextBlock Text="История заданий" Style="{StaticResource SectionTitle}" Margin="0,0,0,12"/>
+                    <DataGrid x:Name="DgProgress" Style="{StaticResource ModernDataGrid}" IsReadOnly="True" MaxHeight="220">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Задание" Binding="{Binding Exercise.Title}" Width="*"/>
+                            <DataGridTextColumn Header="Счёт" Binding="{Binding Score}" Width="70"/>
+                            <DataGridTextColumn Header="Макс" Binding="{Binding MaxScore}" Width="70"/>
+                            <DataGridCheckBoxColumn Header="Сдано" Binding="{Binding IsPassed}" Width="70"/>
+                            <DataGridTextColumn Header="Попытки" Binding="{Binding Attempts}" Width="80"/>
+                            <DataGridTextColumn Header="Дата" Binding="{Binding CompletedAt, StringFormat=dd.MM.yyyy HH:mm}" Width="140"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </StackPanel>
+            </Border>
+            <Border Style="{StaticResource SmallCard}">
+                <StackPanel><TextBlock Text="🏆 Достижения" Style="{StaticResource SectionTitle}" Margin="0,0,0,12"/>
+                    <ItemsControl x:Name="WpAchievements">
+                        <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate><DataTemplate><Border Style="{StaticResource SmallCard}" Width="180" Margin="4"><StackPanel HorizontalAlignment="Center"><TextBlock Text="{Binding IconEmoji}" FontSize="32" HorizontalAlignment="Center" Margin="0,0,0,4"/><TextBlock Text="{Binding Title}" Style="{StaticResource CardTitle}" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap"/><TextBlock Text="{Binding Description}" Style="{StaticResource SubText}" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" Margin="0,4,0,0"/></StackPanel></Border></DataTemplate></ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</Window>

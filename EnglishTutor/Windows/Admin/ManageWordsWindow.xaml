@@ -1,0 +1,69 @@
+﻿<Window x:Class="EnglishTutor.Windows.Admin.ManageWordsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Управление словами" Width="1150" Height="760"
+        WindowStartupLocation="CenterScreen" Background="#F0F4FF">
+    <Window.Resources><ResourceDictionary><ResourceDictionary.MergedDictionaries><ResourceDictionary Source="/Resources/Styles.xaml"/></ResourceDictionary.MergedDictionaries></ResourceDictionary></Window.Resources>
+    <Grid>
+        <Grid.ColumnDefinitions><ColumnDefinition Width="220"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+        <Border Grid.Column="0" Background="#2A3F7E">
+            <DockPanel>
+                <Border DockPanel.Dock="Top" Background="#3B6FE8" Padding="20,24"><StackPanel><TextBlock Text="📚" FontSize="32" HorizontalAlignment="Center"/><TextBlock Text="EnglishTutor" FontFamily="Lora" FontSize="18" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center"/><TextBlock Text="Администратор" FontFamily="Nunito" FontSize="11" Foreground="#B8C5E8" HorizontalAlignment="Center" Margin="0,4,0,0"/></StackPanel></Border>
+                <Button DockPanel.Dock="Bottom" Content="🚪  Выйти" Style="{StaticResource NavButton}" Click="NavLogout_Click" Margin="8,8"/>
+                <StackPanel Margin="8,16,8,0">
+                    <Button Content="🏠  Дашборд" Style="{StaticResource NavButton}" Click="NavDashboard_Click"/>
+                    <Button Content="👥  Пользователи" Style="{StaticResource NavButton}" Click="NavUsers_Click"/>
+                    <Button Content="📝  Слова" Style="{StaticResource NavButtonActive}"/>
+                    <Button Content="📖  Уроки" Style="{StaticResource NavButton}" Click="NavLessons_Click"/>
+                    <Button Content="✏️  Задания" Style="{StaticResource NavButton}" Click="NavExercises_Click"/>
+                    <Button Content="📊  Статистика" Style="{StaticResource NavButton}" Click="NavStats_Click"/>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+        <Grid Grid.Column="1" Margin="28">
+            <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="260"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+            <Grid Grid.Row="0" Margin="0,0,0,16"><TextBlock Text="Управление словами" Style="{StaticResource PageTitle}" VerticalAlignment="Center"/><StackPanel Orientation="Horizontal" HorizontalAlignment="Right"><Button Content="🔍  API" Style="{StaticResource SecondaryButton}" Margin="0,0,8,0" Click="BtnApi_Click"/><Button Content="➕  Новое" Style="{StaticResource PrimaryButton}" Click="BtnNew_Click"/></StackPanel></Grid>
+            <Border Grid.Row="1" Style="{StaticResource Card}" Margin="0,0,0,16">
+                <DataGrid x:Name="DgWords" Style="{StaticResource ModernDataGrid}" IsReadOnly="True" SelectionChanged="DgWords_SelectionChanged">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="ID" Binding="{Binding WordId}" Width="50"/>
+                        <DataGridTextColumn Header="Английское" Binding="{Binding EnglishWord}" Width="150"/>
+                        <DataGridTextColumn Header="Перевод" Binding="{Binding RussianTranslation}" Width="160"/>
+                        <DataGridTextColumn Header="Транскрипция" Binding="{Binding Transcription}" Width="130"/>
+                        <DataGridTextColumn Header="Уровень" Binding="{Binding DifficultyLevel}" Width="100"/>
+                        <DataGridTextColumn Header="Категория" Binding="{Binding Category.Name}" Width="*"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Border>
+            <Border Grid.Row="2" Style="{StaticResource Card}">
+                <Grid>
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0" Margin="0,0,12,0">
+                        <TextBlock Text="Английское слово" Style="{StaticResource SubText}" Margin="0,0,0,4"/>
+                        <TextBox x:Name="TxtEnglish" Style="{StaticResource ModernTextBox}" Height="40" Margin="0,0,0,10"/>
+                        <TextBlock Text="Русский перевод" Style="{StaticResource SubText}" Margin="0,0,0,4"/>
+                        <TextBox x:Name="TxtRussian" Style="{StaticResource ModernTextBox}" Height="40" Margin="0,0,0,10"/>
+                        <TextBlock Text="Транскрипция" Style="{StaticResource SubText}" Margin="0,0,0,4"/>
+                        <TextBox x:Name="TxtTranscription" Style="{StaticResource ModernTextBox}" Height="40"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Margin="0,0,12,0">
+                        <TextBlock Text="Пример (EN)" Style="{StaticResource SubText}" Margin="0,0,0,4"/>
+                        <TextBox x:Name="TxtExampleEn" Style="{StaticResource ModernTextBox}" Height="40" Margin="0,0,0,10"/>
+                        <TextBlock Text="Пример (RU)" Style="{StaticResource SubText}" Margin="0,0,0,4"/>
+                        <TextBox x:Name="TxtExampleRu" Style="{StaticResource ModernTextBox}" Height="40" Margin="0,0,0,10"/>
+                        <TextBlock Text="Уровень" Style="{StaticResource SubText}" Margin="0,0,0,4"/>
+                        <ComboBox x:Name="CbDifficulty" Style="{StaticResource ModernComboBox}" Height="40" SelectedIndex="0"><ComboBoxItem Content="Лёгкий"/><ComboBoxItem Content="Средний"/><ComboBoxItem Content="Сложный"/></ComboBox>
+                    </StackPanel>
+                    <StackPanel Grid.Column="2">
+                        <TextBlock Text="Категория" Style="{StaticResource SubText}" Margin="0,0,0,4"/>
+                        <ComboBox x:Name="CbCategory" Style="{StaticResource ModernComboBox}" Height="40" Margin="0,0,0,10"/>
+                        <TextBlock Text="Из API:" Style="{StaticResource SubText}" Margin="0,0,0,4"/>
+                        <Border Background="#F0F4FF" CornerRadius="8" Padding="10" MinHeight="50" Margin="0,0,0,10"><TextBlock x:Name="TxtApiResult" FontFamily="Nunito" FontSize="12" TextWrapping="Wrap" Foreground="#1A1D3A"/></Border>
+                        <Button Content="💾  Сохранить" Style="{StaticResource SuccessButton}" Height="40" Margin="0,0,0,8" Click="BtnSave_Click"/>
+                        <Button Content="🗑️  Удалить" Style="{StaticResource DangerButton}" Height="40" Click="BtnDelete_Click"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</Window>
