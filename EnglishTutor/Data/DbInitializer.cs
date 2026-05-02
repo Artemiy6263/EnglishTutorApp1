@@ -30,21 +30,23 @@ namespace EnglishTutor.Data
             }
 
             // === SEED CATEGORIES ===
-            if (!ctx.WordCategories.Any())
+            var requiredCategories = new List<WordCategory> {
+                new(){Name="Animals",Description="Животные",IconEmoji="🐾"},
+                new(){Name="Food & Drink",Description="Еда и напитки",IconEmoji="🍎"},
+                new(){Name="Travel",Description="Путешествия",IconEmoji="✈️"},
+                new(){Name="Technology",Description="Технологии",IconEmoji="💻"},
+                new(){Name="Body & Health",Description="Тело и здоровье",IconEmoji="🏥"},
+                new(){Name="Nature",Description="Природа",IconEmoji="🌿"},
+                new(){Name="Home",Description="Дом",IconEmoji="🏠"},
+                new(){Name="Work & Business",Description="Работа и бизнес",IconEmoji="💼"},
+                new(){Name="Sports",Description="Спорт",IconEmoji="⚽"},
+                new(){Name="Education",Description="Образование",IconEmoji="📚"},
+            };
+            var existingCategoryNames = ctx.WordCategories.Select(c => c.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var missingCategories = requiredCategories.Where(c => !existingCategoryNames.Contains(c.Name)).ToList();
+            if (missingCategories.Count > 0)
             {
-                var cats = new List<WordCategory> {
-                    new(){Name="Animals",Description="Животные",IconEmoji="🐾"},
-                    new(){Name="Food & Drink",Description="Еда и напитки",IconEmoji="🍎"},
-                    new(){Name="Travel",Description="Путешествия",IconEmoji="✈️"},
-                    new(){Name="Technology",Description="Технологии",IconEmoji="💻"},
-                    new(){Name="Body & Health",Description="Тело и здоровье",IconEmoji="🏥"},
-                    new(){Name="Nature",Description="Природа",IconEmoji="🌿"},
-                    new(){Name="Home",Description="Дом",IconEmoji="🏠"},
-                    new(){Name="Work & Business",Description="Работа и бизнес",IconEmoji="💼"},
-                    new(){Name="Sports",Description="Спорт",IconEmoji="⚽"},
-                    new(){Name="Education",Description="Образование",IconEmoji="📚"},
-                };
-                ctx.WordCategories.AddRange(cats);
+                ctx.WordCategories.AddRange(missingCategories);
                 ctx.SaveChanges();
             }
 
