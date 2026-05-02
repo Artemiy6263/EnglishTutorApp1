@@ -22,7 +22,7 @@
         </Border>
         <Grid Grid.Column="1" Margin="28">
             <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="260"/><RowDefinition Height="*"/></Grid.RowDefinitions>
-            <Grid Grid.Row="0" Margin="0,0,0,16"><TextBlock Text="Управление словами" Style="{StaticResource PageTitle}" VerticalAlignment="Center"/><StackPanel Orientation="Horizontal" HorizontalAlignment="Right"><Button Content="🔍  API" Style="{StaticResource SecondaryButton}" Margin="0,0,8,0" Click="BtnApi_Click"/><Button Content="➕  Новое" Style="{StaticResource PrimaryButton}" Click="BtnNew_Click"/></StackPanel></Grid>
+            <Grid Grid.Row="0" Margin="0,0,0,16"><TextBlock Text="Управление словами" Style="{StaticResource PageTitle}" VerticalAlignment="Center"/><StackPanel Orientation="Horizontal" HorizontalAlignment="Right"><TextBox x:Name="TxtImportCount" Text="100" Width="70" Height="38" Style="{StaticResource ModernTextBox}" Margin="0,0,8,0" ToolTip="Сколько слов импортировать"/><Button Content="⬇  Импорт слов" Style="{StaticResource SecondaryButton}" Margin="0,0,8,0" Click="BtnImportWords_Click"/><Button Content="🔍  API слова" Style="{StaticResource SecondaryButton}" Margin="0,0,8,0" Click="BtnApi_Click"/><Button Content="➕  Новое" Style="{StaticResource PrimaryButton}" Click="BtnNew_Click"/></StackPanel></Grid>
             <Border Grid.Row="1" Style="{StaticResource Card}" Margin="0,0,0,16">
                 <DataGrid x:Name="DgWords" Style="{StaticResource ModernDataGrid}" IsReadOnly="True" SelectionChanged="DgWords_SelectionChanged">
                     <DataGrid.Columns>
