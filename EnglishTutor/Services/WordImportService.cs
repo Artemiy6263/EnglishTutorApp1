@@ -10,6 +10,7 @@ namespace EnglishTutor.Services
         private static readonly HttpClient _http = new();
         private const string DefaultWordsApiUrl = "https://wordsapiv1.p.rapidapi.com/words";
         private const string DefaultWordsApiHost = "wordsapiv1.p.rapidapi.com";
+        private const string DefaultDatamuseUrl = "https://api.datamuse.com/words";
 
         public static async Task<List<WordSuggestion>> FetchWordsByTopicAsync(string topic, int maxCount = 30)
         {
@@ -45,16 +46,21 @@ namespace EnglishTutor.Services
         public static async Task<WordImportResult> ImportWordsFromWordsApiAsync(int categoryId, DifficultyLevel difficulty, int count)
         {
             var apiKey = App.Configuration["ApiKeys:WordsApiKey"]?.Trim();
-            if (string.IsNullOrWhiteSpace(apiKey))
-                return WordImportResult.Failed("Укажите API ключ WordsAPI в appsettings.json: ApiKeys:WordsApiKey.");
-
             count = Math.Clamp(count, 1, 5000);
-            var suggestions = await FetchWordsFromWordsApiAsync(apiKey, count);
+            var usingFreeApi = string.IsNullOrWhiteSpace(apiKey);
+            var suggestions = usingFreeApi
+                ? await FetchWordsFromFreeDatamuseApiAsync(categoryId, count)
+                : await FetchWordsFromWordsApiAsync(apiKey!, count);
             if (suggestions.Count == 0)
-                return WordImportResult.Failed("WordsAPI не вернул слова. Проверьте ключ и доступ к API.");
+                return WordImportResult.Failed(usingFreeApi
+                    ? "Бесплатный Datamuse API не вернул слова. Проверьте подключение к интернету."
+                    : "WordsAPI не вернул слова. Проверьте ключ и доступ к API.");
 
             using var ctx = new AppDbContext();
-            var existing = ctx.Words.ToDictionary(w => w.EnglishWord.ToLower());
+            var existing = ctx.Words
+                .AsEnumerable()
+                .GroupBy(w => w.EnglishWord.ToLower())
+                .ToDictionary(g => g.Key, g => g.First());
             var wordsForLesson = new List<Word>();
             var enrichLimit = GetEnrichLimit();
             var added = 0;
@@ -96,7 +102,52 @@ namespace EnglishTutor.Services
 
             ctx.SaveChanges();
             var linked = LinkWordsToLesson(ctx, categoryId, wordsForLesson);
-            return new WordImportResult { Added = added, Skipped = skipped, LinkedToLesson = linked, Message = $"Добавлено слов: {added}. Пропущено дублей: {skipped}. Добавлено в урок: {linked}." };
+            var source = usingFreeApi ? "Datamuse API без ключа" : "WordsAPI";
+            return new WordImportResult { Added = added, Skipped = skipped, LinkedToLesson = linked, Message = $"Источник: {source}. Добавлено слов: {added}. Пропущено дублей: {skipped}. Добавлено в урок: {linked}." };
+        }
+
+        private static async Task<List<WordSuggestion>> FetchWordsFromFreeDatamuseApiAsync(int categoryId, int count)
+        {
+            var topics = GetDatamuseTopics(categoryId);
+            var result = new List<WordSuggestion>();
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var topic in topics)
+            {
+                if (result.Count >= count) break;
+                var max = Math.Min(1000, count - result.Count + 100);
+                await AddDatamuseWordsAsync(result, seen, $"topics={Uri.EscapeDataString(topic)}&max={max}", count);
+            }
+
+            foreach (var query in GetBroadDatamuseQueries())
+            {
+                if (result.Count >= count) break;
+                await AddDatamuseWordsAsync(result, seen, query, count);
+            }
+
+            return result;
+        }
+
+        private static async Task AddDatamuseWordsAsync(List<WordSuggestion> result, HashSet<string> seen, string query, int count)
+        {
+            try
+            {
+                var baseUrl = App.Configuration["ApiKeys:DatamuseBaseUrl"]?.Trim();
+                if (string.IsNullOrWhiteSpace(baseUrl)) baseUrl = DefaultDatamuseUrl;
+
+                var json = await _http.GetStringAsync($"{baseUrl}?{query}");
+                var items = JArray.Parse(json);
+                foreach (var item in items)
+                {
+                    var word = NormalizeWord(item["word"]?.ToString() ?? "");
+                    if (string.IsNullOrEmpty(word) || !seen.Add(word))
+                        continue;
+
+                    result.Add(new WordSuggestion { EnglishWord = word, Score = item["score"]?.Value<int>() ?? 0 });
+                    if (result.Count >= count) break;
+                }
+            }
+            catch { }
         }
 
         private static async Task<List<WordSuggestion>> FetchWordsFromWordsApiAsync(string apiKey, int count)
@@ -256,6 +307,50 @@ namespace EnglishTutor.Services
             "Sports" => "Sports & Fitness",
             "Education" => "Education",
             _ => categoryName
+        };
+
+        private static List<string> GetDatamuseTopics(int categoryId)
+        {
+            using var ctx = new AppDbContext();
+            var categoryName = ctx.WordCategories.Find(categoryId)?.Name ?? "";
+            return categoryName switch
+            {
+                "Animals" => new() { "animals", "pets", "wildlife", "mammals", "birds", "fish", "insects" },
+                "Food & Drink" => new() { "food", "drink", "cooking", "kitchen", "fruit", "vegetables", "restaurant" },
+                "Travel" => new() { "travel", "airport", "hotel", "transport", "tourism", "vacation", "city" },
+                "Technology" => new() { "technology", "computer", "internet", "software", "hardware", "science", "engineering" },
+                "Body & Health" => new() { "body", "health", "medicine", "hospital", "fitness", "disease", "doctor" },
+                "Nature" => new() { "nature", "weather", "plants", "environment", "forest", "ocean", "mountain" },
+                "Home" => new() { "home", "house", "furniture", "family", "room", "cleaning", "apartment" },
+                "Work & Business" => new() { "work", "business", "office", "money", "career", "company", "job" },
+                "Sports" => new() { "sports", "fitness", "football", "basketball", "exercise", "competition", "team" },
+                "Education" => new() { "education", "school", "university", "learning", "classroom", "student", "teacher" },
+                _ => new() { categoryName.ToLower(), "english", "learning", "vocabulary" }
+            };
+        }
+
+        private static List<string> GetBroadDatamuseQueries() => new()
+        {
+            "sp=???&max=1000",
+            "sp=????&max=1000",
+            "sp=?????&max=1000",
+            "sp=??????&max=1000",
+            "sp=???????&max=1000",
+            "sp=????????&max=1000",
+            "sp=?????????&max=1000",
+            "rel_jjb=person&max=1000",
+            "rel_jjb=place&max=1000",
+            "rel_jjb=thing&max=1000",
+            "rel_jjb=good&max=1000",
+            "rel_jjb=bad&max=1000",
+            "rel_trg=school&max=1000",
+            "rel_trg=work&max=1000",
+            "rel_trg=home&max=1000",
+            "rel_trg=travel&max=1000",
+            "rel_trg=food&max=1000",
+            "rel_trg=health&max=1000",
+            "rel_trg=technology&max=1000",
+            "rel_trg=nature&max=1000"
         };
 
         private static string NormalizeWord(string word)
