@@ -20,6 +20,25 @@ namespace EnglishTutor.Data
             }
             catch { /* Колонка уже существует или другая ошибка */ }
 
+            try
+            {
+                ctx.Database.ExecuteSqlRaw(@"
+                    IF OBJECT_ID(N'WordImportHistories', N'U') IS NULL
+                    CREATE TABLE WordImportHistories (
+                        WordImportHistoryId INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+                        ImportedAt DATETIME2 NOT NULL,
+                        Source NVARCHAR(100) NOT NULL,
+                        CategoryName NVARCHAR(200) NOT NULL,
+                        RequestedCount INT NOT NULL,
+                        Added INT NOT NULL,
+                        Updated INT NOT NULL,
+                        Skipped INT NOT NULL,
+                        LinkedToLesson INT NOT NULL,
+                        Message NVARCHAR(1000) NOT NULL
+                    )");
+            }
+            catch { /* Таблица уже существует или другая ошибка */ }
+
             // === SEED USERS ===
             if (!ctx.Users.Any())
             {

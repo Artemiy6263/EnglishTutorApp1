@@ -15,19 +15,19 @@ namespace EnglishTutor.Data
         public DbSet<ExerciseQuestion> ExerciseQuestions { get; set; }
         public DbSet<StudentProgress> StudentProgresses { get; set; }
         public DbSet<Achievement> Achievements { get; set; }
+        public DbSet<WordImportHistory> WordImportHistories { get; set; }
         protected override void OnConfiguring(DbContextOptionsBuilder o) =>
             o.UseSqlServer(App.ConnectionString);
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
 
-            
             modelBuilder.Entity<WordCategory>().HasKey(e => e.CategoryId);
             modelBuilder.Entity<GrammarRule>().HasKey(e => e.RuleId);
             modelBuilder.Entity<ExerciseQuestion>().HasKey(e => e.QuestionId);
             modelBuilder.Entity<StudentProgress>().HasKey(e => e.ProgressId);
+            modelBuilder.Entity<WordImportHistory>().HasKey(e => e.WordImportHistoryId);
 
-            
             modelBuilder.Entity<LessonWord>()
                 .HasOne(lw => lw.Lesson)
                 .WithMany(l => l.LessonWords)

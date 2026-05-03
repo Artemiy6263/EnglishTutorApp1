@@ -21,10 +21,10 @@
             </DockPanel>
         </Border>
         <Grid Grid.Column="1" Margin="28">
-            <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="260"/><RowDefinition Height="*"/></Grid.RowDefinitions>
-            <Grid Grid.Row="0" Margin="0,0,0,16"><TextBlock Text="Управление словами" Style="{StaticResource PageTitle}" VerticalAlignment="Center"/><StackPanel Orientation="Horizontal" HorizontalAlignment="Right"><TextBox x:Name="TxtImportCount" Text="1000" Width="80" Height="38" Style="{StaticResource ModernTextBox}" Margin="0,0,8,0" ToolTip="Сколько слов импортировать"/><Button Content="⬇  Импорт в урок" Style="{StaticResource SecondaryButton}" Margin="0,0,8,0" Click="BtnImportWords_Click"/><Button Content="🔍  API слова" Style="{StaticResource SecondaryButton}" Margin="0,0,8,0" Click="BtnApi_Click"/><Button Content="➕  Новое" Style="{StaticResource PrimaryButton}" Click="BtnNew_Click"/></StackPanel></Grid>
+            <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="240"/><RowDefinition Height="*"/><RowDefinition Height="150"/></Grid.RowDefinitions>
+            <Grid Grid.Row="0" Margin="0,0,0,16"><TextBlock Text="Управление словами" Style="{StaticResource PageTitle}" VerticalAlignment="Center"/><StackPanel Orientation="Horizontal" HorizontalAlignment="Right"><TextBox x:Name="TxtImportCount" Text="1000" Width="80" Height="38" Style="{StaticResource ModernTextBox}" Margin="0,0,8,0" ToolTip="Сколько слов импортировать"/><Button Content="⬇  Импорт в урок" Style="{StaticResource SecondaryButton}" Margin="0,0,8,0" Click="BtnImportWords_Click"/><Button Content="🔍  API → форма" Style="{StaticResource SecondaryButton}" Margin="0,0,8,0" Click="BtnApi_Click"/><Button Content="🗑️  Удалить выбранные" Style="{StaticResource DangerButton}" Margin="0,0,8,0" Click="BtnDeleteSelected_Click"/><Button Content="➕  Новое" Style="{StaticResource PrimaryButton}" Click="BtnNew_Click"/></StackPanel></Grid>
             <Border Grid.Row="1" Style="{StaticResource Card}" Margin="0,0,0,16">
-                <DataGrid x:Name="DgWords" Style="{StaticResource ModernDataGrid}" IsReadOnly="True" SelectionChanged="DgWords_SelectionChanged">
+                <DataGrid x:Name="DgWords" Style="{StaticResource ModernDataGrid}" IsReadOnly="True" SelectionMode="Extended" SelectionUnit="FullRow" SelectionChanged="DgWords_SelectionChanged">
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="ID" Binding="{Binding WordId}" Width="50"/>
                         <DataGridTextColumn Header="Английское" Binding="{Binding EnglishWord}" Width="150"/>
@@ -35,7 +35,7 @@
                     </DataGrid.Columns>
                 </DataGrid>
             </Border>
-            <Border Grid.Row="2" Style="{StaticResource Card}">
+            <Border Grid.Row="2" Style="{StaticResource Card}" Margin="0,0,0,16">
                 <Grid>
                     <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0" Margin="0,0,12,0">
@@ -63,6 +63,23 @@
                         <Button Content="🗑️  Удалить" Style="{StaticResource DangerButton}" Height="40" Click="BtnDelete_Click"/>
                     </StackPanel>
                 </Grid>
+            </Border>
+            <Border Grid.Row="3" Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Text="История импорта слов" Style="{StaticResource SectionTitle}" Margin="0,0,0,8"/>
+                    <DataGrid x:Name="DgImportHistory" Style="{StaticResource ModernDataGrid}" IsReadOnly="True" AutoGenerateColumns="False">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Дата" Binding="{Binding ImportedAt}" Width="140"/>
+                            <DataGridTextColumn Header="Источник" Binding="{Binding Source}" Width="170"/>
+                            <DataGridTextColumn Header="Категория" Binding="{Binding CategoryName}" Width="140"/>
+                            <DataGridTextColumn Header="Запрошено" Binding="{Binding RequestedCount}" Width="90"/>
+                            <DataGridTextColumn Header="Добавлено" Binding="{Binding Added}" Width="90"/>
+                            <DataGridTextColumn Header="Обновлено" Binding="{Binding Updated}" Width="90"/>
+                            <DataGridTextColumn Header="В урок" Binding="{Binding LinkedToLesson}" Width="80"/>
+                            <DataGridTextColumn Header="Сообщение" Binding="{Binding Message}" Width="*"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </StackPanel>
             </Border>
         </Grid>
     </Grid>
