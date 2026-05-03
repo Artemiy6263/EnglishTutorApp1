@@ -1,4 +1,5 @@
 using System.Net.Http;
+using System.Text;
 using EnglishTutor.Data;
 using EnglishTutor.Data.Models;
 using Newtonsoft.Json.Linq;
@@ -94,6 +95,139 @@ namespace EnglishTutor.Services
 
             result.Message = $"Автоимпорт завершён. Категорий: {categories.Count}. На категорию: {countPerCategory}. Всего добавлено: {result.Added}. Обновлено: {result.Updated}. Добавлено в уроки: {result.LinkedToLesson}.\n" + string.Join("\n", lines);
             return result;
+        }
+
+        public static async Task<WordImportResult> ImproveWordsWithDeepSeekAsync(List<int> selectedWordIds, int maxCount)
+        {
+            var apiKey = Environment.GetEnvironmentVariable("DEEPSEEK_API_KEY")?.Trim();
+            if (string.IsNullOrWhiteSpace(apiKey))
+                return WordImportResult.Failed("DeepSeek API key не найден. Добавьте переменную окружения Windows DEEPSEEK_API_KEY и перезапустите Visual Studio.");
+
+            maxCount = Math.Clamp(maxCount, 1, 200);
+            using var ctx = new AppDbContext();
+            var categories = ctx.WordCategories.OrderBy(c => c.Name).ToList();
+            var categoryByName = categories.ToDictionary(c => c.Name, StringComparer.OrdinalIgnoreCase);
+            var wordsQuery = ctx.Words.AsQueryable();
+            var words = selectedWordIds.Count > 0
+                ? wordsQuery.Where(w => selectedWordIds.Contains(w.WordId)).Take(maxCount).ToList()
+                : wordsQuery
+                    .AsEnumerable()
+                    .Where(NeedsImportedMetadataUpdate)
+                    .Take(maxCount)
+                    .ToList();
+
+            if (words.Count == 0)
+                return WordImportResult.Failed("Нет слов для улучшения. Выберите слова в таблице или импортируйте слова без перевода.");
+
+            var updated = 0;
+            var skipped = 0;
+            var touchedWordIds = new HashSet<int>();
+            var touchedCategoryIds = new HashSet<int>();
+
+            foreach (var chunk in words.Chunk(30))
+            {
+                var suggestions = await AskDeepSeekForWordMetadataAsync(apiKey, chunk.ToList(), categories);
+                foreach (var suggestion in suggestions)
+                {
+                    var word = words.FirstOrDefault(w => string.Equals(w.EnglishWord, suggestion.EnglishWord, StringComparison.OrdinalIgnoreCase));
+                    if (word == null)
+                    {
+                        skipped++;
+                        continue;
+                    }
+
+                    var changed = false;
+                    if (IsUsefulTranslation(word.EnglishWord, suggestion.RussianTranslation))
+                    {
+                        word.RussianTranslation = Truncate(suggestion.RussianTranslation, 200);
+                        changed = true;
+                    }
+
+                    if (categoryByName.TryGetValue(suggestion.CategoryName, out var category))
+                    {
+                        word.CategoryId = category.CategoryId;
+                        touchedCategoryIds.Add(category.CategoryId);
+                        changed = true;
+                    }
+
+                    if (Enum.TryParse<DifficultyLevel>(suggestion.Difficulty, true, out var difficulty))
+                    {
+                        word.DifficultyLevel = difficulty;
+                        changed = true;
+                    }
+
+                    if (changed)
+                    {
+                        touchedWordIds.Add(word.WordId);
+                        touchedCategoryIds.Add(word.CategoryId);
+                        updated++;
+                    }
+                    else
+                    {
+                        skipped++;
+                    }
+                }
+            }
+
+            if (updated == 0)
+                return WordImportResult.Failed("DeepSeek не вернул подходящих улучшений.");
+
+            ctx.SaveChanges();
+            var links = ctx.LessonWords.Where(lw => touchedWordIds.Contains(lw.WordId)).ToList();
+            ctx.LessonWords.RemoveRange(links);
+            ctx.SaveChanges();
+
+            var linked = 0;
+            foreach (var categoryId in touchedCategoryIds)
+                linked += SyncCategoryWordsToLesson(ctx, categoryId);
+
+            var message = $"DeepSeek AI: улучшено слов: {updated}. Пропущено: {skipped}. Обновлено связей с уроками: {linked}.";
+            SaveImportHistory(ctx, "DeepSeek AI", "Все категории", words.Count, 0, updated, skipped, linked, message);
+            return new WordImportResult { Added = 0, Updated = updated, Skipped = skipped, LinkedToLesson = linked, Message = message };
+        }
+
+        private static async Task<List<DeepSeekWordMetadata>> AskDeepSeekForWordMetadataAsync(string apiKey, List<Word> words, List<WordCategory> categories)
+        {
+            var allowedCategories = string.Join(", ", categories.Select(c => c.Name));
+            var inputWords = new JArray(words.Select(w => new JObject
+            {
+                ["englishWord"] = w.EnglishWord,
+                ["currentTranslation"] = w.RussianTranslation,
+                ["currentCategoryId"] = w.CategoryId
+            }));
+            var prompt = "You improve vocabulary for a Russian English-learning app. " +
+                $"Allowed categoryName values: {allowedCategories}. " +
+                "Return only a JSON array. Each item must have englishWord, russianTranslation, categoryName, difficulty. " +
+                "difficulty must be Easy, Medium, or Hard. Use natural Russian translations, not explanations. Words: " + inputWords.ToString();
+            var requestBody = new JObject
+            {
+                ["model"] = "deepseek-chat",
+                ["messages"] = new JArray
+                {
+                    new JObject { ["role"] = "system", ["content"] = "Return strict JSON only. No markdown." },
+                    new JObject { ["role"] = "user", ["content"] = prompt }
+                },
+                ["temperature"] = 0.2
+            };
+
+            using var request = new HttpRequestMessage(HttpMethod.Post, "https://api.deepseek.com/chat/completions");
+            request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {apiKey}");
+            request.Content = new StringContent(requestBody.ToString(), Encoding.UTF8, "application/json");
+            using var response = await _http.SendAsync(request);
+            var responseText = await response.Content.ReadAsStringAsync();
+            if (!response.IsSuccessStatusCode)
+                throw new InvalidOperationException($"DeepSeek API вернул ошибку: {(int)response.StatusCode} {Truncate(responseText, 300)}");
+
+            var content = JObject.Parse(responseText)["choices"]?.FirstOrDefault()?["message"]?["content"]?.ToString() ?? "";
+            var json = ExtractJsonArray(content);
+            var array = JArray.Parse(json);
+            return array.Select(item => new DeepSeekWordMetadata
+            {
+                EnglishWord = item["englishWord"]?.ToString() ?? "",
+                RussianTranslation = item["russianTranslation"]?.ToString() ?? "",
+                CategoryName = item["categoryName"]?.ToString() ?? "",
+                Difficulty = item["difficulty"]?.ToString() ?? ""
+            }).Where(item => !string.IsNullOrWhiteSpace(item.EnglishWord)).ToList();
         }
 
         private static async Task<WordImportResult> ImportWordsForCategoryAsync(int categoryId, DifficultyLevel difficulty, int count, bool allowWordsApi, bool allowBroadDatamuseQueries, string sourceOverride, bool requireRussianTranslation)
@@ -535,6 +669,16 @@ namespace EnglishTutor.Services
             return text.Length <= maxLength ? text : text[..maxLength];
         }
 
+        private static string ExtractJsonArray(string value)
+        {
+            var text = value.Trim();
+            var start = text.IndexOf('[');
+            var end = text.LastIndexOf(']');
+            if (start < 0 || end < start)
+                throw new InvalidOperationException("DeepSeek не вернул JSON-массив.");
+            return text[start..(end + 1)];
+        }
+
         private static int GetEnrichLimit()
         {
             var configured = App.Configuration["ApiKeys:EnrichImportedWordsLimit"]?.Trim();
@@ -587,5 +731,13 @@ namespace EnglishTutor.Services
         public string Message { get; set; } = string.Empty;
 
         public static WordImportResult Failed(string message) => new() { Message = message };
+    }
+
+    public class DeepSeekWordMetadata
+    {
+        public string EnglishWord { get; set; } = string.Empty;
+        public string RussianTranslation { get; set; } = string.Empty;
+        public string CategoryName { get; set; } = string.Empty;
+        public string Difficulty { get; set; } = string.Empty;
     }
 }
