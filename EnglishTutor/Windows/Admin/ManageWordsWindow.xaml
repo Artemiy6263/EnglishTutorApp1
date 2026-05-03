@@ -22,7 +22,7 @@
         </Border>
         <Grid Grid.Column="1" Margin="28">
             <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="240"/><RowDefinition Height="*"/><RowDefinition Height="150"/></Grid.RowDefinitions>
-            <Grid Grid.Row="0" Margin="0,0,0,16"><TextBlock Text="Управление словами" Style="{StaticResource PageTitle}" VerticalAlignment="Center"/><StackPanel Orientation="Horizontal" HorizontalAlignment="Right"><TextBox x:Name="TxtImportCount" Text="1000" Width="80" Height="38" Style="{StaticResource ModernTextBox}" Margin="0,0,8,0" ToolTip="Сколько слов импортировать"/><Button Content="⬇  Импорт в урок" Style="{StaticResource SecondaryButton}" Margin="0,0,8,0" Click="BtnImportWords_Click"/><Button Content="🔍  API → форма" Style="{StaticResource SecondaryButton}" Margin="0,0,8,0" Click="BtnApi_Click"/><Button Content="🗑️  Удалить выбранные" Style="{StaticResource DangerButton}" Margin="0,0,8,0" Click="BtnDeleteSelected_Click"/><Button Content="➕  Новое" Style="{StaticResource PrimaryButton}" Click="BtnNew_Click"/></StackPanel></Grid>
+            <Grid Grid.Row="0" Margin="0,0,0,16"><TextBlock Text="Управление словами" Style="{StaticResource PageTitle}" VerticalAlignment="Center"/><StackPanel Orientation="Horizontal" HorizontalAlignment="Right"><TextBox x:Name="TxtImportCount" Text="100" Width="80" Height="38" Style="{StaticResource ModernTextBox}" Margin="0,0,8,0" ToolTip="Сколько слов импортировать: для автоимпорта это количество на каждую категорию"/><Button Content="🤖  Автоимпорт всех категорий" Style="{StaticResource PrimaryButton}" Margin="0,0,8,0" Click="BtnAutoImportAll_Click"/><Button Content="⬇  Импорт выбранной категории" Style="{StaticResource SecondaryButton}" Margin="0,0,8,0" Click="BtnImportWords_Click"/><Button Content="🔍  API → форма" Style="{StaticResource SecondaryButton}" Margin="0,0,8,0" Click="BtnApi_Click"/><Button Content="🗑️  Удалить выбранные" Style="{StaticResource DangerButton}" Margin="0,0,8,0" Click="BtnDeleteSelected_Click"/><Button Content="➕  Новое" Style="{StaticResource PrimaryButton}" Click="BtnNew_Click"/></StackPanel></Grid>
             <Border Grid.Row="1" Style="{StaticResource Card}" Margin="0,0,0,16">
                 <DataGrid x:Name="DgWords" Style="{StaticResource ModernDataGrid}" IsReadOnly="True" SelectionMode="Extended" SelectionUnit="FullRow" SelectionChanged="DgWords_SelectionChanged">
                     <DataGrid.Columns>
@@ -55,7 +55,7 @@
                         <ComboBox x:Name="CbDifficulty" Style="{StaticResource ModernComboBox}" Height="40" SelectedIndex="0"><ComboBoxItem Content="Лёгкий"/><ComboBoxItem Content="Средний"/><ComboBoxItem Content="Сложный"/></ComboBox>
                     </StackPanel>
                     <StackPanel Grid.Column="2">
-                        <TextBlock Text="Категория" Style="{StaticResource SubText}" Margin="0,0,0,4"/>
+                        <TextBlock Text="Категория (для ручного слова; автоимпорт выберет сам)" Style="{StaticResource SubText}" Margin="0,0,0,4"/>
                         <ComboBox x:Name="CbCategory" Style="{StaticResource ModernComboBox}" Height="40" Margin="0,0,0,10"/>
                         <TextBlock Text="Из API:" Style="{StaticResource SubText}" Margin="0,0,0,4"/>
                         <Border Background="#F0F4FF" CornerRadius="8" Padding="10" MinHeight="50" Margin="0,0,0,10"><TextBlock x:Name="TxtApiResult" FontFamily="Nunito" FontSize="12" TextWrapping="Wrap" Foreground="#1A1D3A"/></Border>
