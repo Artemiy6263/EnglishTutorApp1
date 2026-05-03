@@ -11,6 +11,19 @@ namespace EnglishTutor.Services
         private const string DefaultWordsApiUrl = "https://wordsapiv1.p.rapidapi.com/words";
         private const string DefaultWordsApiHost = "wordsapiv1.p.rapidapi.com";
         private const string DefaultDatamuseUrl = "https://api.datamuse.com/words";
+        private static readonly Dictionary<string, string> LocalTranslations = new(StringComparer.OrdinalIgnoreCase)
+        {
+            ["cat"] = "кот", ["dog"] = "собака", ["bird"] = "птица", ["horse"] = "лошадь", ["cow"] = "корова", ["pig"] = "свинья", ["sheep"] = "овца", ["goat"] = "коза", ["lion"] = "лев", ["tiger"] = "тигр", ["bear"] = "медведь", ["wolf"] = "волк", ["fox"] = "лиса", ["rabbit"] = "кролик", ["monkey"] = "обезьяна", ["snake"] = "змея", ["elephant"] = "слон", ["giraffe"] = "жираф",
+            ["food"] = "еда", ["water"] = "вода", ["bread"] = "хлеб", ["milk"] = "молоко", ["meat"] = "мясо", ["fish"] = "рыба", ["rice"] = "рис", ["soup"] = "суп", ["salad"] = "салат", ["apple"] = "яблоко", ["banana"] = "банан", ["orange"] = "апельсин", ["potato"] = "картофель", ["tomato"] = "помидор", ["cheese"] = "сыр", ["egg"] = "яйцо", ["tea"] = "чай", ["coffee"] = "кофе", ["juice"] = "сок", ["restaurant"] = "ресторан",
+            ["travel"] = "путешествие", ["airport"] = "аэропорт", ["hotel"] = "отель", ["ticket"] = "билет", ["passport"] = "паспорт", ["train"] = "поезд", ["bus"] = "автобус", ["car"] = "машина", ["taxi"] = "такси", ["plane"] = "самолёт", ["ship"] = "корабль", ["road"] = "дорога", ["map"] = "карта", ["city"] = "город", ["country"] = "страна", ["beach"] = "пляж", ["station"] = "станция", ["luggage"] = "багаж", ["trip"] = "поездка", ["tour"] = "тур",
+            ["computer"] = "компьютер", ["phone"] = "телефон", ["internet"] = "интернет", ["software"] = "программа", ["hardware"] = "оборудование", ["keyboard"] = "клавиатура", ["mouse"] = "мышь", ["screen"] = "экран", ["network"] = "сеть", ["server"] = "сервер", ["data"] = "данные", ["file"] = "файл", ["folder"] = "папка", ["code"] = "код", ["program"] = "программа", ["device"] = "устройство", ["battery"] = "батарея", ["camera"] = "камера", ["robot"] = "робот", ["science"] = "наука",
+            ["body"] = "тело", ["head"] = "голова", ["hand"] = "рука", ["arm"] = "рука", ["leg"] = "нога", ["foot"] = "ступня", ["eye"] = "глаз", ["ear"] = "ухо", ["nose"] = "нос", ["mouth"] = "рот", ["tooth"] = "зуб", ["heart"] = "сердце", ["health"] = "здоровье", ["doctor"] = "врач", ["hospital"] = "больница", ["medicine"] = "лекарство", ["pain"] = "боль", ["blood"] = "кровь", ["skin"] = "кожа", ["exercise"] = "упражнение",
+            ["nature"] = "природа", ["tree"] = "дерево", ["flower"] = "цветок", ["grass"] = "трава", ["forest"] = "лес", ["river"] = "река", ["lake"] = "озеро", ["sea"] = "море", ["ocean"] = "океан", ["mountain"] = "гора", ["weather"] = "погода", ["rain"] = "дождь", ["snow"] = "снег", ["wind"] = "ветер", ["sun"] = "солнце", ["moon"] = "луна", ["star"] = "звезда", ["sky"] = "небо", ["earth"] = "земля", ["plant"] = "растение",
+            ["home"] = "дом", ["house"] = "дом", ["room"] = "комната", ["kitchen"] = "кухня", ["bathroom"] = "ванная", ["bedroom"] = "спальня", ["door"] = "дверь", ["window"] = "окно", ["table"] = "стол", ["chair"] = "стул", ["bed"] = "кровать", ["sofa"] = "диван", ["floor"] = "пол", ["wall"] = "стена", ["family"] = "семья", ["mother"] = "мама", ["father"] = "папа", ["brother"] = "брат", ["sister"] = "сестра", ["apartment"] = "квартира",
+            ["work"] = "работа", ["business"] = "бизнес", ["office"] = "офис", ["job"] = "работа", ["company"] = "компания", ["manager"] = "менеджер", ["money"] = "деньги", ["bank"] = "банк", ["meeting"] = "встреча", ["project"] = "проект", ["career"] = "карьера", ["client"] = "клиент", ["market"] = "рынок", ["price"] = "цена", ["sale"] = "продажа", ["shop"] = "магазин", ["email"] = "электронная почта", ["document"] = "документ", ["contract"] = "контракт",
+            ["sport"] = "спорт", ["sports"] = "спорт", ["football"] = "футбол", ["basketball"] = "баскетбол", ["tennis"] = "теннис", ["game"] = "игра", ["player"] = "игрок", ["team"] = "команда", ["coach"] = "тренер", ["competition"] = "соревнование", ["winner"] = "победитель", ["ball"] = "мяч", ["goal"] = "гол", ["run"] = "бегать", ["swim"] = "плавать", ["jump"] = "прыгать", ["fitness"] = "фитнес", ["gym"] = "спортзал", ["race"] = "гонка", ["match"] = "матч",
+            ["education"] = "образование", ["school"] = "школа", ["university"] = "университет", ["student"] = "студент", ["teacher"] = "учитель", ["lesson"] = "урок", ["class"] = "класс", ["book"] = "книга", ["notebook"] = "тетрадь", ["pen"] = "ручка", ["pencil"] = "карандаш", ["test"] = "тест", ["exam"] = "экзамен", ["homework"] = "домашняя работа", ["learn"] = "учиться", ["study"] = "изучать", ["read"] = "читать", ["write"] = "писать", ["question"] = "вопрос", ["answer"] = "ответ"
+        };
 
         public static async Task<List<WordSuggestion>> FetchWordsByTopicAsync(string topic, int maxCount = 30)
         {
@@ -56,11 +69,40 @@ namespace EnglishTutor.Services
 
         public static async Task<WordImportResult> ImportWordsFromWordsApiAsync(int categoryId, DifficultyLevel difficulty, int count)
         {
+            return await ImportWordsForCategoryAsync(categoryId, difficulty, count, true, true, "", true);
+        }
+
+        public static async Task<WordImportResult> AutoImportWordsForAllCategoriesAsync(int countPerCategory)
+        {
+            countPerCategory = Math.Clamp(countPerCategory, 1, 1000);
+            using var ctx = new AppDbContext();
+            var categories = ctx.WordCategories.OrderBy(c => c.Name).ToList();
+            if (categories.Count == 0)
+                return WordImportResult.Failed("Категории слов не найдены.");
+
+            var result = new WordImportResult();
+            var lines = new List<string>();
+            foreach (var category in categories)
+            {
+                var categoryResult = await ImportWordsForCategoryAsync(category.CategoryId, DifficultyLevel.Easy, countPerCategory, false, false, "Datamuse автоимпорт по темам", true);
+                result.Added += categoryResult.Added;
+                result.Updated += categoryResult.Updated;
+                result.Skipped += categoryResult.Skipped;
+                result.LinkedToLesson += categoryResult.LinkedToLesson;
+                lines.Add($"{category.Name}: +{categoryResult.Added}, обновлено {categoryResult.Updated}, в урок {categoryResult.LinkedToLesson}");
+            }
+
+            result.Message = $"Автоимпорт завершён. Категорий: {categories.Count}. На категорию: {countPerCategory}. Всего добавлено: {result.Added}. Обновлено: {result.Updated}. Добавлено в уроки: {result.LinkedToLesson}.\n" + string.Join("\n", lines);
+            return result;
+        }
+
+        private static async Task<WordImportResult> ImportWordsForCategoryAsync(int categoryId, DifficultyLevel difficulty, int count, bool allowWordsApi, bool allowBroadDatamuseQueries, string sourceOverride, bool requireRussianTranslation)
+        {
             var apiKey = App.Configuration["ApiKeys:WordsApiKey"]?.Trim();
             count = Math.Clamp(count, 1, 5000);
-            var usingFreeApi = string.IsNullOrWhiteSpace(apiKey);
+            var usingFreeApi = !allowWordsApi || string.IsNullOrWhiteSpace(apiKey);
             var suggestions = usingFreeApi
-                ? await FetchWordsFromFreeDatamuseApiAsync(categoryId, count)
+                ? await FetchWordsFromFreeDatamuseApiAsync(categoryId, count, allowBroadDatamuseQueries)
                 : await FetchWordsFromWordsApiAsync(apiKey!, count);
             if (suggestions.Count == 0)
                 return WordImportResult.Failed(usingFreeApi
@@ -96,9 +138,13 @@ namespace EnglishTutor.Services
                     if (existingWord.CategoryId == categoryId && NeedsImportedMetadataUpdate(existingWord) && translatedCount < translateLimit)
                     {
                         existingWord.DifficultyLevel = DetectDifficulty(word, suggestion.Score, difficulty);
-                        existingWord.RussianTranslation = await GetRussianTranslationOrFallbackAsync(word, existingWord.ExampleSentence, translatedCount < translateLimit);
+                        var updatedTranslation = await GetRussianTranslationOrFallbackAsync(word, existingWord.ExampleSentence, translatedCount < translateLimit);
                         translatedCount++;
-                        updated++;
+                        if (!requireRussianTranslation || IsUsefulTranslation(word, updatedTranslation))
+                        {
+                            existingWord.RussianTranslation = updatedTranslation;
+                            updated++;
+                        }
                     }
                     continue;
                 }
@@ -107,6 +153,11 @@ namespace EnglishTutor.Services
                 if (enrichedCount < enrichLimit) enrichedCount++;
                 var translation = await GetRussianTranslationOrFallbackAsync(word, enriched.Definition, translatedCount < translateLimit);
                 if (translatedCount < translateLimit) translatedCount++;
+                if (requireRussianTranslation && !IsUsefulTranslation(word, translation))
+                {
+                    skipped++;
+                    continue;
+                }
                 var newWord = new Word
                 {
                     EnglishWord = word,
@@ -124,13 +175,13 @@ namespace EnglishTutor.Services
 
             ctx.SaveChanges();
             var linked = SyncCategoryWordsToLesson(ctx, categoryId);
-            var source = usingFreeApi ? "Datamuse API без ключа" : "WordsAPI";
+            var source = string.IsNullOrWhiteSpace(sourceOverride) ? usingFreeApi ? "Datamuse API без ключа" : "WordsAPI" : sourceOverride;
             var message = $"Источник: {source}. Категория: {category.Name}. Добавлено слов: {added}. Обновлено: {updated}. Пропущено дублей: {skipped}. Добавлено в урок: {linked}.";
             SaveImportHistory(ctx, source, category.Name, count, added, updated, skipped, linked, message);
             return new WordImportResult { Added = added, Skipped = skipped, Updated = updated, LinkedToLesson = linked, Message = message };
         }
 
-        private static async Task<List<WordSuggestion>> FetchWordsFromFreeDatamuseApiAsync(int categoryId, int count)
+        private static async Task<List<WordSuggestion>> FetchWordsFromFreeDatamuseApiAsync(int categoryId, int count, bool includeBroadQueries)
         {
             var topics = GetDatamuseTopics(categoryId);
             var result = new List<WordSuggestion>();
@@ -142,6 +193,9 @@ namespace EnglishTutor.Services
                 var max = Math.Min(1000, count - result.Count + 100);
                 await AddDatamuseWordsAsync(result, seen, $"topics={Uri.EscapeDataString(topic)}&max={max}", count);
             }
+
+            if (!includeBroadQueries)
+                return result;
 
             foreach (var query in GetBroadDatamuseQueries())
             {
@@ -260,6 +314,9 @@ namespace EnglishTutor.Services
 
         private static async Task<string> GetRussianTranslationOrFallbackAsync(string word, string fallback, bool allowOnlineTranslation)
         {
+            if (LocalTranslations.TryGetValue(word, out var localTranslation))
+                return localTranslation;
+
             var yandexTranslation = await TryTranslateToRussianAsync(word);
             if (IsUsefulTranslation(word, yandexTranslation))
                 return Truncate(yandexTranslation, 200);
