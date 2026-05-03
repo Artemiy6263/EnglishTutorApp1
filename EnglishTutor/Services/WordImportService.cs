@@ -43,6 +43,17 @@ namespace EnglishTutor.Services
             return suggestion;
         }
 
+        public static async Task<string> GetRussianTranslationForWordAsync(string word, string fallback = "")
+        {
+            return await GetRussianTranslationOrFallbackAsync(word, fallback, true);
+        }
+
+        public static int SyncCategoryToLesson(int categoryId)
+        {
+            using var ctx = new AppDbContext();
+            return SyncCategoryWordsToLesson(ctx, categoryId);
+        }
+
         public static async Task<WordImportResult> ImportWordsFromWordsApiAsync(int categoryId, DifficultyLevel difficulty, int count)
         {
             var apiKey = App.Configuration["ApiKeys:WordsApiKey"]?.Trim();
@@ -114,7 +125,9 @@ namespace EnglishTutor.Services
             ctx.SaveChanges();
             var linked = SyncCategoryWordsToLesson(ctx, categoryId);
             var source = usingFreeApi ? "Datamuse API без ключа" : "WordsAPI";
-            return new WordImportResult { Added = added, Skipped = skipped, Updated = updated, LinkedToLesson = linked, Message = $"Источник: {source}. Категория: {category.Name}. Добавлено слов: {added}. Обновлено: {updated}. Пропущено дублей: {skipped}. Добавлено в урок: {linked}." };
+            var message = $"Источник: {source}. Категория: {category.Name}. Добавлено слов: {added}. Обновлено: {updated}. Пропущено дублей: {skipped}. Добавлено в урок: {linked}.";
+            SaveImportHistory(ctx, source, category.Name, count, added, updated, skipped, linked, message);
+            return new WordImportResult { Added = added, Skipped = skipped, Updated = updated, LinkedToLesson = linked, Message = message };
         }
 
         private static async Task<List<WordSuggestion>> FetchWordsFromFreeDatamuseApiAsync(int categoryId, int count)
@@ -316,11 +329,11 @@ namespace EnglishTutor.Services
                 .Where(lw => lw.LessonId == lesson.LessonId)
                 .Select(lw => lw.WordId)
                 .ToHashSet();
-            var nextOrder = ctx.LessonWords
+            var lessonOrderIndexes = ctx.LessonWords
                 .Where(lw => lw.LessonId == lesson.LessonId)
                 .Select(lw => lw.OrderIndex)
-                .DefaultIfEmpty(0)
-                .Max() + 1;
+                .ToList();
+            var nextOrder = lessonOrderIndexes.Count == 0 ? 1 : lessonOrderIndexes.Max() + 1;
             var linked = 0;
 
             foreach (var word in words)
@@ -339,6 +352,27 @@ namespace EnglishTutor.Services
 
             ctx.SaveChanges();
             return linked;
+        }
+
+        private static void SaveImportHistory(AppDbContext ctx, string source, string categoryName, int requestedCount, int added, int updated, int skipped, int linked, string message)
+        {
+            try
+            {
+                ctx.WordImportHistories.Add(new WordImportHistory
+                {
+                    ImportedAt = DateTime.Now,
+                    Source = source,
+                    CategoryName = categoryName,
+                    RequestedCount = requestedCount,
+                    Added = added,
+                    Updated = updated,
+                    Skipped = skipped,
+                    LinkedToLesson = linked,
+                    Message = Truncate(message, 1000)
+                });
+                ctx.SaveChanges();
+            }
+            catch { }
         }
 
         private static Lesson FindOrCreateLessonForCategory(AppDbContext ctx, WordCategory category)
